@@ -9,6 +9,7 @@ DEFAULT_CONFIG = {
     "active_provider": "gemini",
     "hotkey": "alt+c",
     "sidebar_width": 430,
+    "dock_side": "right",
     "always_on_top": True,
     "theme": "dark",
     "font_size": 13,
@@ -111,7 +112,7 @@ class ConfigManager:
             self.save()
 
     def get_hotkey(self):
-        return self.config.get("hotkey", "windows+c")
+        return self.config.get("hotkey", "alt+c")
 
     def set_hotkey(self, hotkey_str):
         self.config["hotkey"] = hotkey_str.strip()
@@ -119,6 +120,18 @@ class ConfigManager:
 
     def get_sidebar_width(self):
         return int(self.config.get("sidebar_width", 430))
+
+    def set_sidebar_width(self, width):
+        self.config["sidebar_width"] = int(width)
+        self.save()
+
+    def get_dock_side(self):
+        return self.config.get("dock_side", "right")
+
+    def set_dock_side(self, side):
+        if side in ("left", "right"):
+            self.config["dock_side"] = side
+            self.save()
 
     def get_always_on_top(self):
         return bool(self.config.get("always_on_top", True))

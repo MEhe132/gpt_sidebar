@@ -46,6 +46,14 @@ class TestConfigManager(unittest.TestCase):
         self.cm.set_hotkey("ctrl+shift+a")
         self.assertEqual(self.cm.get_hotkey(), "ctrl+shift+a")
 
+    def test_dock_side_and_width(self):
+        self.assertEqual(self.cm.get_dock_side(), "right")
+        self.cm.set_dock_side("left")
+        self.assertEqual(self.cm.get_dock_side(), "left")
+
+        self.cm.set_sidebar_width(520)
+        self.assertEqual(self.cm.get_sidebar_width(), 520)
+
 
 class TestAIService(unittest.TestCase):
     def setUp(self):

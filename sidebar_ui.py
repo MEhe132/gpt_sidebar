@@ -1,4 +1,4 @@
-"""Modern Right-Edge AI Sidebar Popup built with CustomTkinter."""
+"""Modern Edge-Docked AI Sidebar Popup with Resizing and Left/Right Docking."""
 
 import os
 import sys
@@ -134,32 +134,112 @@ class AISidebarApp(ctk.CTk):
         self.current_stream_card: Optional[MessageCard] = None
         self.is_streaming = False
         self._is_visible = True
+        self._quit_callback = None
 
         self._init_window()
+        self._build_layout_containers()
         self._build_header()
+        self._build_toolbar()
         self._build_chat_area()
         self._build_quick_chips()
         self._build_input_area()
+        self._layout_frames()
+
+    def set_quit_callback(self, cb):
+        self._quit_callback = cb
 
     def _init_window(self):
         self.title("AI Sidebar")
         self.overrideredirect(True)  # Frameless docked sidebar
         self.attributes("-topmost", self.config_manager.get_always_on_top())
 
-        # Calculate Right-Edge Screen Work Area
+        # Retrieve Screen Work Area
         wx, wy, ww, wh = get_screen_work_area()
+        self.work_x = wx
+        self.work_y = wy
+        self.work_w = ww
+        self.work_h = wh
+
+        self.dock_side = self.config_manager.get_dock_side()  # "right" or "left"
         self.sidebar_w = self.config_manager.get_sidebar_width()
-        self.sidebar_h = wh
-        self.sidebar_x = wx + ww - self.sidebar_w
-        self.sidebar_y = wy
+        self.sidebar_h = self.work_h
+        self.sidebar_y = self.work_y
+
+        if self.dock_side == "right":
+            self.sidebar_x = self.work_x + self.work_w - self.sidebar_w
+        else:
+            self.sidebar_x = self.work_x
+
+        self.geometry(f"{self.sidebar_w}x{self.sidebar_h}+{self.sidebar_x}+{self.sidebar_y}")
+        self.configure(fg_color="#0f172a")
+
+    def _build_layout_containers(self):
+        # Resize Grip Strip on inner edge
+        self.resize_grip = tk.Frame(self, bg="#334155", width=6, cursor="size_we")
+        self.resize_grip.bind("<Enter>", lambda e: self.resize_grip.configure(bg="#3b82f6"))
+        self.resize_grip.bind("<Leave>", lambda e: self.resize_grip.configure(bg="#334155"))
+        self.resize_grip.bind("<Button-1>", self._on_resize_start)
+        self.resize_grip.bind("<B1-Motion>", self._on_resize_drag)
+        self.resize_grip.bind("<ButtonRelease-1>", self._on_resize_end)
+
+        # Main content container
+        self.main_container = ctk.CTkFrame(self, fg_color="#0f172a", corner_radius=0)
+
+    def _layout_frames(self):
+        self.resize_grip.pack_forget()
+        self.main_container.pack_forget()
+
+        if self.dock_side == "right":
+            # Grip on the left edge of sidebar
+            self.resize_grip.pack(side="left", fill="y")
+            self.main_container.pack(side="right", fill="both", expand=True)
+        else:
+            # Grip on the right edge of sidebar
+            self.resize_grip.pack(side="right", fill="y")
+            self.main_container.pack(side="left", fill="both", expand=True)
+
+    def _on_resize_start(self, event):
+        self._resize_start_x = event.x_root
+        self._resize_start_w = self.sidebar_w
+
+    def _on_resize_drag(self, event):
+        if self.dock_side == "right":
+            # Dragging left increases width
+            dx = self._resize_start_x - event.x_root
+        else:
+            # Dragging right increases width
+            dx = event.x_root - self._resize_start_x
+
+        new_w = max(320, min(self.work_w - 60, self._resize_start_w + dx))
+        self.sidebar_w = new_w
+
+        if self.dock_side == "right":
+            self.sidebar_x = self.work_x + self.work_w - self.sidebar_w
+        else:
+            self.sidebar_x = self.work_x
 
         self.geometry(f"{self.sidebar_w}x{self.sidebar_h}+{self.sidebar_x}+{self.sidebar_y}")
 
-        # Dark border outline for frameless window
-        self.configure(fg_color="#0f172a")
+    def _on_resize_end(self, event):
+        self.config_manager.set_sidebar_width(self.sidebar_w)
+
+    def toggle_dock_side(self):
+        """Swaps docking position between Right and Left edges of screen."""
+        self.dock_side = "left" if self.dock_side == "right" else "right"
+        self.config_manager.set_dock_side(self.dock_side)
+
+        if self.dock_side == "right":
+            self.sidebar_x = self.work_x + self.work_w - self.sidebar_w
+            self.dock_btn.configure(text="◀ Left")
+        else:
+            self.sidebar_x = self.work_x
+            self.dock_btn.configure(text="Right ▶")
+
+        self._layout_frames()
+        self.geometry(f"{self.sidebar_w}x{self.sidebar_h}+{self.sidebar_x}+{self.sidebar_y}")
 
     def toggle_visibility(self):
-        """Toggle hide/show right-edge sidebar on hotkey press."""
+        """Toggle hide/show sidebar on hotkey press (Alt + C)."""
         if self._is_visible:
             self.withdraw()
             self._is_visible = False
@@ -168,16 +248,27 @@ class AISidebarApp(ctk.CTk):
             self.lift()
             self.focus_force()
             self._is_visible = True
-            # Focus prompt entry
             self.input_box.focus_set()
 
+    def quit_app(self):
+        """Completely terminates and closes the application."""
+        if self._quit_callback:
+            self._quit_callback()
+        else:
+            try:
+                self.ai_service.stop_stream()
+            except Exception:
+                pass
+            self.destroy()
+            os._exit(0)
+
     def _build_header(self):
-        header_frame = ctk.CTkFrame(self, fg_color="#1e293b", corner_radius=0, height=52)
+        header_frame = ctk.CTkFrame(self.main_container, fg_color="#1e293b", corner_radius=0, height=52)
         header_frame.pack(fill="x", side="top")
 
         # Title & Logo
         title_box = ctk.CTkFrame(header_frame, fg_color="transparent")
-        title_box.pack(side="left", padx=12, pady=8)
+        title_box.pack(side="left", padx=10, pady=8)
 
         logo_lbl = ctk.CTkLabel(
             title_box,
@@ -189,50 +280,79 @@ class AISidebarApp(ctk.CTk):
 
         # Right control buttons
         controls = ctk.CTkFrame(header_frame, fg_color="transparent")
-        controls.pack(side="right", padx=10, pady=8)
+        controls.pack(side="right", padx=6, pady=8)
+
+        # Dock Shift button (Left <-> Right)
+        dock_txt = "◀ Left" if self.dock_side == "right" else "Right ▶"
+        self.dock_btn = ctk.CTkButton(
+            controls,
+            text=dock_txt,
+            width=54,
+            height=28,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="#334155",
+            hover_color="#475569",
+            command=self.toggle_dock_side
+        )
+        self.dock_btn.pack(side="left", padx=2)
 
         # Clear chat
         clear_btn = ctk.CTkButton(
             controls,
             text="🗑️",
-            width=32,
+            width=28,
             height=28,
             fg_color="#334155",
             hover_color="#475569",
             command=self.clear_chat
         )
-        clear_btn.pack(side="left", padx=3)
+        clear_btn.pack(side="left", padx=2)
 
         # Settings
         settings_btn = ctk.CTkButton(
             controls,
             text="⚙️",
-            width=32,
+            width=28,
             height=28,
             fg_color="#334155",
             hover_color="#475569",
             command=self.open_settings
         )
-        settings_btn.pack(side="left", padx=3)
+        settings_btn.pack(side="left", padx=2)
 
-        # Minimize / Hide button
-        hide_btn = ctk.CTkButton(
+        # Minimize / Hide button (hides to Alt+C)
+        min_btn = ctk.CTkButton(
+            controls,
+            text="—",
+            width=28,
+            height=28,
+            fg_color="#475569",
+            hover_color="#64748b",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            command=self.toggle_visibility
+        )
+        min_btn.pack(side="left", padx=2)
+
+        # Prominent Cross (✕) button: closes and terminates the app cleanly
+        close_btn = ctk.CTkButton(
             controls,
             text="✕",
-            width=32,
+            width=30,
             height=28,
             fg_color="#dc2626",
             hover_color="#ef4444",
-            command=self.toggle_visibility
+            font=ctk.CTkFont(size=12, weight="bold"),
+            command=self.quit_app
         )
-        hide_btn.pack(side="left", padx=3)
+        close_btn.pack(side="left", padx=2)
 
+    def _build_toolbar(self):
         # Provider Switcher Toolbar
-        toolbar = ctk.CTkFrame(self, fg_color="#182234", corner_radius=0, height=38)
+        toolbar = ctk.CTkFrame(self.main_container, fg_color="#182234", corner_radius=0, height=38)
         toolbar.pack(fill="x", side="top")
 
         lbl_prov = ctk.CTkLabel(toolbar, text="Model:", font=ctk.CTkFont(size=12), text_color="#94a3b8")
-        lbl_prov.pack(side="left", padx=(12, 6), pady=6)
+        lbl_prov.pack(side="left", padx=(10, 4), pady=6)
 
         self.provider_var = ctk.StringVar(value=self.config_manager.get_active_provider())
         self.provider_seg = ctk.CTkSegmentedButton(
@@ -243,7 +363,7 @@ class AISidebarApp(ctk.CTk):
             height=26,
             font=ctk.CTkFont(size=11, weight="bold")
         )
-        self.provider_seg.pack(side="left", padx=4, pady=6)
+        self.provider_seg.pack(side="left", padx=2, pady=6)
 
         self.model_badge = ctk.CTkLabel(
             toolbar,
@@ -251,7 +371,7 @@ class AISidebarApp(ctk.CTk):
             font=ctk.CTkFont(size=11),
             text_color="#38bdf8"
         )
-        self.model_badge.pack(side="right", padx=12, pady=6)
+        self.model_badge.pack(side="right", padx=10, pady=6)
 
     def _get_current_model_display(self):
         prov = self.config_manager.get_active_provider()
@@ -263,10 +383,8 @@ class AISidebarApp(ctk.CTk):
         self.model_badge.configure(text=self._get_current_model_display())
 
     def _build_chat_area(self):
-        self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=8)
-
-        # Welcome Card
+        self.scroll_frame = ctk.CTkScrollableFrame(self.main_container, fg_color="transparent")
+        self.scroll_frame.pack(fill="both", expand=True, padx=8, pady=6)
         self._add_welcome_card()
 
     def _add_welcome_card(self):
@@ -283,17 +401,18 @@ class AISidebarApp(ctk.CTk):
 
         hotkey = self.config_manager.get_hotkey()
         msg = (
-            f"• Press `{hotkey.upper()}` anytime to toggle this sidebar.\n"
-            f"• Switch between Gemini, DeepSeek, and OpenAI at the top.\n"
-            f"• Click ⚙️ to configure your API keys.\n"
-            f"• Ask coding questions, debug errors, or summarize text!"
+            f"• Press `{hotkey.upper()}` to toggle show/hide.\n"
+            f"• Drag the inner vertical edge to increase/decrease width.\n"
+            f"• Click '◀ Left' / 'Right ▶' in the header to shift sides.\n"
+            f"• Click '✕' in the top-right corner to exit the app.\n"
+            f"• Click ⚙️ to configure your API keys."
         )
         w_body = ctk.CTkLabel(welcome_frame, text=msg, justify="left", font=ctk.CTkFont(size=12), text_color="#cbd5e1")
         w_body.pack(anchor="w", padx=12, pady=(0, 10))
 
     def _build_quick_chips(self):
-        chips_frame = ctk.CTkFrame(self, fg_color="transparent", height=32)
-        chips_frame.pack(fill="x", side="top", padx=10, pady=(2, 6))
+        chips_frame = ctk.CTkFrame(self.main_container, fg_color="transparent", height=32)
+        chips_frame.pack(fill="x", side="top", padx=8, pady=(2, 6))
 
         chips = [
             ("📋 Paste & Ask", self._paste_from_clipboard),
@@ -335,8 +454,8 @@ class AISidebarApp(ctk.CTk):
             pass
 
     def _build_input_area(self):
-        input_container = ctk.CTkFrame(self, fg_color="#1e293b", corner_radius=12)
-        input_container.pack(fill="x", side="bottom", padx=10, pady=(4, 12))
+        input_container = ctk.CTkFrame(self.main_container, fg_color="#1e293b", corner_radius=12)
+        input_container.pack(fill="x", side="bottom", padx=8, pady=(4, 10))
 
         # Text input
         self.input_box = ctk.CTkTextbox(
@@ -374,7 +493,6 @@ class AISidebarApp(ctk.CTk):
             font=ctk.CTkFont(size=11, weight="bold"),
             command=self._stop_generation
         )
-        # Initially hidden
 
         self.send_btn = ctk.CTkButton(
             btn_row,
@@ -441,7 +559,6 @@ class AISidebarApp(ctk.CTk):
         )
 
     def _on_stream_chunk(self, chunk: str):
-        # Post to main Tkinter thread
         self.after(0, lambda: self._update_stream_ui(chunk))
 
     def _update_stream_ui(self, chunk: str):
@@ -504,7 +621,6 @@ class AISidebarApp(ctk.CTk):
         SettingsModal(self, self.config_manager, on_save_callback=self._on_settings_saved)
 
     def _on_settings_saved(self):
-        # Refresh UI according to newly saved config
         self.attributes("-topmost", self.config_manager.get_always_on_top())
         self.provider_var.set(self.config_manager.get_active_provider())
         self.model_badge.configure(text=self._get_current_model_display())

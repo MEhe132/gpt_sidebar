@@ -50,9 +50,13 @@ def main():
     def on_closing():
         print("Shutting down AI Sidebar...")
         hotkey_mgr.stop()
-        app.destroy()
-        sys.exit(0)
+        try:
+            app.destroy()
+        except Exception:
+            pass
+        os._exit(0)
 
+    app.set_quit_callback(on_closing)
     app.protocol("WM_DELETE_WINDOW", on_closing)
 
     try:

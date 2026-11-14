@@ -2,6 +2,7 @@
   "active_provider": "gemini",
   "hotkey": "alt+c",
   "sidebar_width": 430,
+  "dock_side": "right",
   "always_on_top": true,
   "theme": "dark",
   "font_size": 13,
