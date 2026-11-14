@@ -1,5 +1,8 @@
 # AI Desktop Sidebar ⚡🤖
 
+[![CI/CD Pipeline](https://github.com/MEhe132/gpt_sidebar/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/MEhe132/gpt_sidebar/actions/workflows/ci-cd.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > **A modern, ultra-responsive desktop AI sidebar popup pinned to the right edge of your Windows screen.**  
 > Seamlessly switch between **Google Gemini**, **DeepSeek (R1 / V3)**, and **OpenAI (ChatGPT)** with real-time streaming responses, summoned anytime with **`Win + C`**!
 
