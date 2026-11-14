@@ -145,6 +145,9 @@ class AISidebarApp(ctk.CTk):
         self._build_input_area()
         self._layout_frames()
 
+        # Automatically place cursor in input box on launch
+        self.after(100, self.focus_input)
+
     def set_quit_callback(self, cb):
         self._quit_callback = cb
 
@@ -253,9 +256,26 @@ class AISidebarApp(ctk.CTk):
             self._is_visible = False
         else:
             self.deiconify()
-            self.lift()
-            self.focus_force()
             self._is_visible = True
+            # Automatically focus and place cursor inside prompt box
+            self.after(40, self.focus_input)
+
+    def focus_input(self):
+        """Points and activates the blinking text cursor directly in the input box."""
+        try:
+            hwnd = self.winfo_id()
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+        except Exception:
+            pass
+        self.lift()
+        self.focus_force()
+        try:
+            if hasattr(self.input_box, "_textbox"):
+                self.input_box._textbox.focus_force()
+                self.input_box._textbox.mark_set("insert", "end")
+            else:
+                self.input_box.focus_set()
+        except Exception:
             self.input_box.focus_set()
 
     def quit_app(self):
@@ -481,16 +501,24 @@ class AISidebarApp(ctk.CTk):
         btn_row = ctk.CTkFrame(input_container, fg_color="transparent")
         btn_row.pack(fill="x", padx=8, pady=(0, 6))
 
-        hint_lbl = ctk.CTkLabel(
-            btn_row,
-            text="Enter to send • Shift+Enter newline",
-            font=ctk.CTkFont(size=10),
-            text_color="#64748b"
+        # Action button container permanently locked to the RIGHT edge so it never disappears on shrink
+        self.btn_actions = ctk.CTkFrame(btn_row, fg_color="transparent")
+        self.btn_actions.pack(side="right")
+
+        self.send_btn = ctk.CTkButton(
+            self.btn_actions,
+            text="Send ➔",
+            width=68,
+            height=26,
+            fg_color="#2563eb",
+            hover_color="#1d4ed8",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self.send_message
         )
-        hint_lbl.pack(side="left", padx=4)
+        self.send_btn.pack(side="right")
 
         self.stop_btn = ctk.CTkButton(
-            btn_row,
+            self.btn_actions,
             text="⏹ Stop",
             width=65,
             height=26,
@@ -499,18 +527,16 @@ class AISidebarApp(ctk.CTk):
             font=ctk.CTkFont(size=11, weight="bold"),
             command=self._stop_generation
         )
+        # Initially not packed; appears in btn_actions when streaming
 
-        self.send_btn = ctk.CTkButton(
+        self.hint_lbl = ctk.CTkLabel(
             btn_row,
-            text="Send ➔",
-            width=70,
-            height=26,
-            fg_color="#2563eb",
-            hover_color="#1d4ed8",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            command=self.send_message
+            text="Enter to send • Shift+Enter newline",
+            font=ctk.CTkFont(size=10),
+            text_color="#64748b",
+            anchor="w"
         )
-        self.send_btn.pack(side="right")
+        self.hint_lbl.pack(side="left", padx=4, fill="x", expand=True)
 
     def _on_enter_pressed(self, event):
         if not (event.state & 0x0001):  # Shift key NOT pressed
