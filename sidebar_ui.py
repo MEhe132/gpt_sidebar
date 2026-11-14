@@ -153,7 +153,7 @@ class AISidebarApp(ctk.CTk):
         self.overrideredirect(True)  # Frameless docked sidebar
         self.attributes("-topmost", self.config_manager.get_always_on_top())
 
-        # Retrieve Screen Work Area
+        # Retrieve Screen Work Area (Physical pixels)
         wx, wy, ww, wh = get_screen_work_area()
         self.work_x = wx
         self.work_y = wy
@@ -170,8 +170,16 @@ class AISidebarApp(ctk.CTk):
         else:
             self.sidebar_x = self.work_x
 
-        self.geometry(f"{self.sidebar_w}x{self.sidebar_h}+{self.sidebar_x}+{self.sidebar_y}")
+        self.set_window_geometry(self.sidebar_w, self.sidebar_h, self.sidebar_x, self.sidebar_y)
         self.configure(fg_color="#0f172a")
+
+    def set_window_geometry(self, width, height, x, y):
+        """Bypasses CustomTkinter DPI multiplier to keep window position pixel-perfect with screen edges."""
+        self.sidebar_w = int(width)
+        self.sidebar_h = int(height)
+        self.sidebar_x = int(x)
+        self.sidebar_y = int(y)
+        tk.Tk.geometry(self, f"{self.sidebar_w}x{self.sidebar_h}+{self.sidebar_x}+{self.sidebar_y}")
 
     def _build_layout_containers(self):
         # Resize Grip Strip on inner edge
@@ -210,7 +218,7 @@ class AISidebarApp(ctk.CTk):
             # Dragging right increases width
             dx = event.x_root - self._resize_start_x
 
-        new_w = max(320, min(self.work_w - 60, self._resize_start_w + dx))
+        new_w = max(280, min(self.work_w - 60, self._resize_start_w + dx))
         self.sidebar_w = new_w
 
         if self.dock_side == "right":
@@ -218,7 +226,7 @@ class AISidebarApp(ctk.CTk):
         else:
             self.sidebar_x = self.work_x
 
-        self.geometry(f"{self.sidebar_w}x{self.sidebar_h}+{self.sidebar_x}+{self.sidebar_y}")
+        self.set_window_geometry(self.sidebar_w, self.sidebar_h, self.sidebar_x, self.sidebar_y)
 
     def _on_resize_end(self, event):
         self.config_manager.set_sidebar_width(self.sidebar_w)
@@ -236,7 +244,7 @@ class AISidebarApp(ctk.CTk):
             self.dock_btn.configure(text="Right ▶")
 
         self._layout_frames()
-        self.geometry(f"{self.sidebar_w}x{self.sidebar_h}+{self.sidebar_x}+{self.sidebar_y}")
+        self.set_window_geometry(self.sidebar_w, self.sidebar_h, self.sidebar_x, self.sidebar_y)
 
     def toggle_visibility(self):
         """Toggle hide/show sidebar on hotkey press (Alt + C)."""
@@ -266,85 +274,83 @@ class AISidebarApp(ctk.CTk):
         header_frame = ctk.CTkFrame(self.main_container, fg_color="#1e293b", corner_radius=0, height=52)
         header_frame.pack(fill="x", side="top")
 
-        # Title & Logo
-        title_box = ctk.CTkFrame(header_frame, fg_color="transparent")
-        title_box.pack(side="left", padx=10, pady=8)
-
-        logo_lbl = ctk.CTkLabel(
-            title_box,
-            text="⚡ AI Sidebar",
-            font=ctk.CTkFont(size=15, weight="bold"),
-            text_color="#f8fafc"
-        )
-        logo_lbl.pack(side="left")
-
-        # Right control buttons
-        controls = ctk.CTkFrame(header_frame, fg_color="transparent")
-        controls.pack(side="right", padx=6, pady=8)
-
-        # Dock Shift button (Left <-> Right)
-        dock_txt = "◀ Left" if self.dock_side == "right" else "Right ▶"
-        self.dock_btn = ctk.CTkButton(
-            controls,
-            text=dock_txt,
-            width=54,
-            height=28,
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color="#334155",
-            hover_color="#475569",
-            command=self.toggle_dock_side
-        )
-        self.dock_btn.pack(side="left", padx=2)
-
-        # Clear chat
-        clear_btn = ctk.CTkButton(
-            controls,
-            text="🗑️",
-            width=28,
-            height=28,
-            fg_color="#334155",
-            hover_color="#475569",
-            command=self.clear_chat
-        )
-        clear_btn.pack(side="left", padx=2)
-
-        # Settings
-        settings_btn = ctk.CTkButton(
-            controls,
-            text="⚙️",
-            width=28,
-            height=28,
-            fg_color="#334155",
-            hover_color="#475569",
-            command=self.open_settings
-        )
-        settings_btn.pack(side="left", padx=2)
-
-        # Minimize / Hide button (hides to Alt+C)
-        min_btn = ctk.CTkButton(
-            controls,
-            text="—",
-            width=28,
-            height=28,
-            fg_color="#475569",
-            hover_color="#64748b",
-            font=ctk.CTkFont(size=12, weight="bold"),
-            command=self.toggle_visibility
-        )
-        min_btn.pack(side="left", padx=2)
-
-        # Prominent Cross (✕) button: closes and terminates the app cleanly
+        # 1. First pack right-side control buttons directly into header_frame from right-to-left:
+        # Prominent Close (✕) button: always anchored to the very top-right edge
         close_btn = ctk.CTkButton(
-            controls,
+            header_frame,
             text="✕",
-            width=30,
+            width=28,
             height=28,
             fg_color="#dc2626",
             hover_color="#ef4444",
             font=ctk.CTkFont(size=12, weight="bold"),
             command=self.quit_app
         )
-        close_btn.pack(side="left", padx=2)
+        close_btn.pack(side="right", padx=(2, 6), pady=8)
+
+        # Minimize / Hide button (hides to Alt+C)
+        min_btn = ctk.CTkButton(
+            header_frame,
+            text="—",
+            width=26,
+            height=28,
+            fg_color="#475569",
+            hover_color="#64748b",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            command=self.toggle_visibility
+        )
+        min_btn.pack(side="right", padx=2, pady=8)
+
+        # Settings
+        settings_btn = ctk.CTkButton(
+            header_frame,
+            text="⚙️",
+            width=26,
+            height=28,
+            fg_color="#334155",
+            hover_color="#475569",
+            command=self.open_settings
+        )
+        settings_btn.pack(side="right", padx=2, pady=8)
+
+        # Clear chat
+        clear_btn = ctk.CTkButton(
+            header_frame,
+            text="🗑️",
+            width=26,
+            height=28,
+            fg_color="#334155",
+            hover_color="#475569",
+            command=self.clear_chat
+        )
+        clear_btn.pack(side="right", padx=2, pady=8)
+
+        # Dock Shift button (Left <-> Right)
+        dock_txt = "◀ Left" if self.dock_side == "right" else "Right ▶"
+        self.dock_btn = ctk.CTkButton(
+            header_frame,
+            text=dock_txt,
+            width=50,
+            height=28,
+            font=ctk.CTkFont(size=10, weight="bold"),
+            fg_color="#334155",
+            hover_color="#475569",
+            command=self.toggle_dock_side
+        )
+        self.dock_btn.pack(side="right", padx=2, pady=8)
+
+        # Title & Logo (packed side="left", truncates cleanly if narrow)
+        title_box = ctk.CTkFrame(header_frame, fg_color="transparent")
+        title_box.pack(side="left", padx=8, pady=8, fill="x", expand=True)
+
+        logo_lbl = ctk.CTkLabel(
+            title_box,
+            text="⚡ AI Sidebar",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#f8fafc",
+            anchor="w"
+        )
+        logo_lbl.pack(side="left")
 
     def _build_toolbar(self):
         # Provider Switcher Toolbar
