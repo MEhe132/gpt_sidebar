@@ -106,6 +106,19 @@ class MessageCard(ctk.CTkFrame):
         self.text_box.configure(state="disabled")
         self._adjust_height()
 
+    def clear_text(self):
+        self.content = ""
+        self.text_box.configure(state="normal")
+        self.text_box.delete("1.0", "end")
+        self.text_box.configure(state="disabled")
+
+    def append_chunk(self, chunk: str):
+        self.content += chunk
+        self.text_box.configure(state="normal")
+        self.text_box.insert("end", chunk)
+        self.text_box.configure(state="disabled")
+        self._adjust_height()
+
     def update_text(self, new_text: str):
         self.content = new_text
         self.text_box.configure(state="normal")
@@ -420,7 +433,7 @@ class AISidebarApp(ctk.CTk):
         self.provider_var = ctk.StringVar(value=self.config_manager.get_active_provider())
         self.provider_seg = ctk.CTkSegmentedButton(
             toolbar,
-            values=["gemini", "deepseek", "openai"],
+            values=["gemini", "groq", "deepseek", "openai"],
             variable=self.provider_var,
             command=self._on_provider_change,
             height=26,
@@ -635,7 +648,17 @@ class AISidebarApp(ctk.CTk):
             return
         self.streamed_content += chunk
         if self.current_stream_card:
-            self.current_stream_card.update_text(self.streamed_content)
+            if self.current_stream_card.content == "Thinking...":
+                self.current_stream_card.clear_text()
+            self.current_stream_card.append_chunk(chunk)
+        self._throttled_scroll()
+
+    def _throttled_scroll(self):
+        if not hasattr(self, "_scroll_job") or self._scroll_job is None:
+            self._scroll_job = self.after(60, self._do_scroll)
+
+    def _do_scroll(self):
+        self._scroll_job = None
         self._scroll_to_bottom()
 
     def _on_stream_complete(self, final_text: str):
@@ -674,7 +697,6 @@ class AISidebarApp(ctk.CTk):
         self.send_btn.pack(side="right")
 
     def _scroll_to_bottom(self):
-        self.update_idletasks()
         try:
             self.scroll_frame._parent_canvas.yview_moveto(1.0)
         except Exception:

@@ -9,6 +9,9 @@ class AIService:
         self.config_manager = config_manager
         self._stop_requested = False
         self._current_thread: Optional[threading.Thread] = None
+        self._gemini_client = None
+        self._gemini_key = None
+        self._openai_clients = {}
 
     def stop_stream(self):
         """Signals the current streaming generator to stop immediately."""
@@ -43,7 +46,7 @@ class AIService:
             try:
                 if provider == "gemini":
                     self._stream_gemini(api_key, model, system_prompt, messages, on_chunk, accumulated_callback=lambda txt: non_local_set(txt))
-                elif provider in ("deepseek", "openai"):
+                elif provider in ("deepseek", "openai", "groq"):
                     base_url = provider_cfg.get("base_url")
                     self._stream_openai_compatible(
                         api_key=api_key,
@@ -89,10 +92,13 @@ class AIService:
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=api_key)
+        # Reuse client to avoid SSL handshake penalty on every request
+        if self._gemini_client is None or self._gemini_key != api_key:
+            self._gemini_client = genai.Client(api_key=api_key)
+            self._gemini_key = api_key
 
-        # Format history for Gemini SDK
-        # We can construct contents or pass messages
+        client = self._gemini_client
+
         formatted_contents = []
         for msg in messages:
             role = "user" if msg["role"] == "user" else "model"
@@ -103,9 +109,17 @@ class AIService:
                 )
             )
 
+        # Eliminate thinking latency (thinking_budget=0) for ultra-fast instant answers
+        thinking_cfg = None
+        try:
+            thinking_cfg = types.ThinkingConfig(thinking_budget=0)
+        except Exception:
+            pass
+
         config = types.GenerateContentConfig(
             system_instruction=system_prompt if system_prompt else None,
             temperature=0.7,
+            thinking_config=thinking_cfg,
         )
 
         response = client.models.generate_content_stream(
@@ -126,10 +140,14 @@ class AIService:
     def _stream_openai_compatible(self, api_key: str, base_url: Optional[str], model: str, system_prompt: str, messages: List[Dict[str, str]], on_chunk: Callable[[str], None], accumulated_callback):
         from openai import OpenAI
 
-        client = OpenAI(
-            api_key=api_key,
-            base_url=base_url if base_url else None
-        )
+        cache_key = (api_key, base_url)
+        if cache_key not in self._openai_clients:
+            self._openai_clients[cache_key] = OpenAI(
+                api_key=api_key,
+                base_url=base_url if base_url else None
+            )
+
+        client = self._openai_clients[cache_key]
 
         payload_messages = []
         if system_prompt:

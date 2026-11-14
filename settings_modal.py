@@ -24,7 +24,7 @@ class SettingsModal(ctk.CTkToplevel):
         self.attributes("-topmost", True)
         self.grab_set()  # Make modal
 
-        self._show_keys = {"gemini": False, "deepseek": False, "openai": False}
+        self._show_keys = {"gemini": False, "groq": False, "deepseek": False, "openai": False}
         self._build_ui()
 
     def _build_ui(self):
@@ -55,7 +55,7 @@ class SettingsModal(ctk.CTkToplevel):
         self.active_prov_var = ctk.StringVar(value=self.config_manager.get_active_provider())
         self.active_prov_menu = ctk.CTkOptionMenu(
             sec1,
-            values=["gemini", "deepseek", "openai"],
+            values=["gemini", "groq", "deepseek", "openai"],
             variable=self.active_prov_var,
             width=200
         )
@@ -84,6 +84,30 @@ class SettingsModal(ctk.CTkToplevel):
         gemini_models = gemini_cfg.get("available_models", ["gemini-3.8-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"])
         self.gemini_model_var = ctk.StringVar(value=gemini_cfg.get("model", "gemini-3.8-flash"))
         self._create_model_dropdown(sec_gemini, "Gemini Model:", gemini_models, self.gemini_model_var)
+
+        # --- Section 2.5: Groq Setup (Ultra-Fast 500+ tok/s) ---
+        groq_cfg = providers.get("groq", {})
+        sec_groq = self._create_section(scroll, "⚡ Groq (Ultra-Fast 500+ tokens/sec • Free)")
+
+        groq_link_btn = ctk.CTkButton(
+            sec_groq,
+            text="Get Free Groq Key ↗ (Console.groq.com)",
+            fg_color="transparent",
+            text_color="#3b82f6",
+            hover_color="#1e293b",
+            anchor="w",
+            height=20,
+            command=lambda: webbrowser.open("https://console.groq.com/keys")
+        )
+        groq_link_btn.pack(anchor="w", padx=10, pady=(2, 6))
+
+        self.groq_key_entry, self.groq_eye_btn = self._create_key_row(
+            sec_groq, "Groq API Key:", groq_cfg.get("api_key", ""), "groq"
+        )
+
+        groq_models = groq_cfg.get("available_models", ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "deepseek-r1-distill-llama-70b"])
+        self.groq_model_var = ctk.StringVar(value=groq_cfg.get("model", "llama-3.3-70b-versatile"))
+        self._create_model_dropdown(sec_groq, "Groq Model:", groq_models, self.groq_model_var)
 
         # --- Section 3: DeepSeek Setup ---
         deepseek_cfg = providers.get("deepseek", {})
@@ -218,6 +242,10 @@ class SettingsModal(ctk.CTkToplevel):
         # Update Gemini
         self.config_manager.set_provider_key("gemini", self.gemini_key_entry.get())
         self.config_manager.set_provider_model("gemini", self.gemini_model_var.get())
+
+        # Update Groq
+        self.config_manager.set_provider_key("groq", self.groq_key_entry.get())
+        self.config_manager.set_provider_model("groq", self.groq_model_var.get())
 
         # Update DeepSeek
         self.config_manager.set_provider_key("deepseek", self.deepseek_key_entry.get())
