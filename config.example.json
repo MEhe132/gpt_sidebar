@@ -1,6 +1,6 @@
 {
   "active_provider": "gemini",
-  "hotkey": "windows+c",
+  "hotkey": "alt+c",
   "sidebar_width": 430,
   "always_on_top": true,
   "theme": "dark",

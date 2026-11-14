@@ -4,14 +4,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **A modern, ultra-responsive desktop AI sidebar popup pinned to the right edge of your Windows screen.**  
-> Seamlessly switch between **Google Gemini**, **DeepSeek (R1 / V3)**, and **OpenAI (ChatGPT)** with real-time streaming responses, summoned anytime with **`Win + C`**!
+> Seamlessly switch between **Google Gemini**, **DeepSeek (R1 / V3)**, and **OpenAI (ChatGPT)** with real-time streaming responses, summoned anytime with **`Alt + C`**!
 
 ---
 
 ## ✨ Highlights & Features
 
 - 🪟 **Right-Edge Docked Sidebar**: Pinned smoothly to the right border of your desktop without covering your taskbar, always ready when you need it.
-- ⌨️ **Global Hotkey (`Win + C`)**: Toggle open or minimize the sidebar instantly from any application or full-screen game.
+- ⌨️ **Global Hotkey (`Alt + C`)**: Toggle open or minimize the sidebar instantly from any application or full-screen game.
 - 🧠 **Multi-Provider AI Switching**:
   - **Google Gemini**: Super-fast with free-tier access (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`).
   - **DeepSeek**: Deep reasoning models (`deepseek-chat`, `deepseek-reasoner` / R1) via standard API.
@@ -66,7 +66,7 @@ Your keys are stored locally on your machine in `config.json` (which is safely i
 
 ## ⌨️ Hotkey Customization
 
-- Default: **`Win + C`**
+- Default: **`Alt + C`**
 - If you want to change it (e.g. to `Alt + Space`, `Ctrl + Shift + A`, or `Ctrl + Space`), simply open **⚙️ Settings**, type your preferred shortcut in the **Global Hotkey** field, and click **Save**.
 
 ---

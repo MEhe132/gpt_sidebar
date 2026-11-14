@@ -24,7 +24,7 @@ class TestConfigManager(unittest.TestCase):
     def test_default_config_generated(self):
         self.assertTrue(os.path.exists(self.config_path))
         self.assertEqual(self.cm.get_active_provider(), "gemini")
-        self.assertEqual(self.cm.get_hotkey(), "windows+c")
+        self.assertEqual(self.cm.get_hotkey(), "alt+c")
 
     def test_update_provider_key(self):
         self.cm.set_provider_key("gemini", "test_gemini_key_123")

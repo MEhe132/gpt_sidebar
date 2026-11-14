@@ -7,7 +7,7 @@ EXAMPLE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "
 
 DEFAULT_CONFIG = {
     "active_provider": "gemini",
-    "hotkey": "windows+c",
+    "hotkey": "alt+c",
     "sidebar_width": 430,
     "always_on_top": True,
     "theme": "dark",
