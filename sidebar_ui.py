@@ -249,6 +249,37 @@ class AISidebarApp(ctk.CTk):
         self._layout_frames()
         self.set_window_geometry(self.sidebar_w, self.sidebar_h, self.sidebar_x, self.sidebar_y)
 
+    def _force_windows_foreground(self):
+        """Forces the Tkinter window to become the active foreground window in Windows OS using AttachThreadInput."""
+        try:
+            hwnd = self.winfo_id()
+            user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
+
+            # Find top-level OS window ancestor (GA_ROOT = 2)
+            top_hwnd = user32.GetAncestor(hwnd, 2)
+            if not top_hwnd:
+                top_hwnd = hwnd
+
+            fore_hwnd = user32.GetForegroundWindow()
+            fore_thread = user32.GetWindowThreadProcessId(fore_hwnd, None)
+            cur_thread = kernel32.GetCurrentThreadId()
+
+            if fore_thread and fore_thread != cur_thread:
+                user32.AttachThreadInput(cur_thread, fore_thread, True)
+                user32.BringWindowToTop(top_hwnd)
+                user32.SetForegroundWindow(top_hwnd)
+                user32.SetActiveWindow(top_hwnd)
+                user32.SwitchToThisWindow(top_hwnd, True)
+                user32.AttachThreadInput(cur_thread, fore_thread, False)
+            else:
+                user32.BringWindowToTop(top_hwnd)
+                user32.SetForegroundWindow(top_hwnd)
+                user32.SetActiveWindow(top_hwnd)
+                user32.SwitchToThisWindow(top_hwnd, True)
+        except Exception:
+            pass
+
     def toggle_visibility(self):
         """Toggle hide/show sidebar on hotkey press (Alt + C)."""
         if self._is_visible:
@@ -257,26 +288,32 @@ class AISidebarApp(ctk.CTk):
         else:
             self.deiconify()
             self._is_visible = True
-            # Automatically focus and place cursor inside prompt box
-            self.after(40, self.focus_input)
+            self.focus_input()
 
     def focus_input(self):
-        """Points and activates the blinking text cursor directly in the input box."""
+        """Brings window to foreground and places typing cursor directly in the prompt text box."""
         try:
-            hwnd = self.winfo_id()
-            ctypes.windll.user32.SetForegroundWindow(hwnd)
+            self.lift()
+            self.attributes("-topmost", True)
+            self._force_windows_foreground()
+
+            def _apply():
+                try:
+                    if hasattr(self.input_box, "_textbox"):
+                        self.input_box._textbox.focus_force()
+                        self.input_box._textbox.mark_set("insert", "end")
+                    else:
+                        self.input_box.focus_set()
+                except Exception:
+                    pass
+
+            _apply()
+            # Staggered focus passes to ensure Windows finishes processing the physical Alt+C release
+            self.after(30, _apply)
+            self.after(80, _apply)
+            self.after(160, _apply)
         except Exception:
             pass
-        self.lift()
-        self.focus_force()
-        try:
-            if hasattr(self.input_box, "_textbox"):
-                self.input_box._textbox.focus_force()
-                self.input_box._textbox.mark_set("insert", "end")
-            else:
-                self.input_box.focus_set()
-        except Exception:
-            self.input_box.focus_set()
 
     def quit_app(self):
         """Completely terminates and closes the application."""
