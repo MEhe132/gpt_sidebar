@@ -105,6 +105,30 @@ class MessageCard(ctk.CTkFrame):
         self.text_box.pack(fill="both", expand=True, padx=10, pady=(0, 8))
         self.render_markdown(self.content)
 
+        # Ensure mouse wheel and touchpad scrolling directly scroll the canvas
+        self._bind_mousewheel_to_scroll(self.text_box)
+        if hasattr(self.text_box, "_textbox"):
+            self._bind_mousewheel_to_scroll(self.text_box._textbox)
+
+    def _bind_mousewheel_to_scroll(self, widget):
+        def _on_wheel(event):
+            canvas = getattr(self.master, "_parent_canvas", None)
+            if not canvas or canvas.yview() == (0.0, 1.0):
+                return
+            delta = getattr(event, "delta", 0)
+            if delta == 0:
+                return
+            if abs(delta) >= 120:
+                units = -int(delta / 4)
+            else:
+                units = -int(delta / 2)
+                if units == 0:
+                    units = -1 if delta > 0 else 1
+            canvas.yview("scroll", units, "units")
+            return "break"
+
+        widget.bind("<MouseWheel>", _on_wheel)
+
     def clear_text(self):
         self.content = ""
         self.text_box.configure(state="normal")
@@ -547,7 +571,58 @@ class AISidebarApp(ctk.CTk):
     def _build_chat_area(self):
         self.scroll_frame = ctk.CTkScrollableFrame(self.main_container, fg_color="transparent")
         self.scroll_frame.pack(fill="both", expand=True, padx=8, pady=6)
+        self._configure_smooth_scrolling()
         self._add_welcome_card()
+
+    def _configure_smooth_scrolling(self):
+        """Enables smooth mouse-wheel and touchpad 2-finger scrolling across all cards and text boxes."""
+        def custom_check_valid(widget):
+            # Do not intercept if user is actively in the prompt input textbox at bottom
+            if hasattr(self, "input_box"):
+                if widget == self.input_box or widget == getattr(self.input_box, "_textbox", None):
+                    return False
+            # Check if widget is inside the scrollable frame or quick chips hierarchy
+            cur = widget
+            while cur is not None:
+                if cur == self.scroll_frame or cur == getattr(self.scroll_frame, "_parent_canvas", None):
+                    return True
+                if hasattr(self, "chips_frame") and cur == self.chips_frame:
+                    return True
+                cur = getattr(cur, "master", None)
+            return False
+
+        def smooth_mouse_wheel(event):
+            if not custom_check_valid(event.widget):
+                return
+            canvas = getattr(self.scroll_frame, "_parent_canvas", None)
+            if not canvas or canvas.yview() == (0.0, 1.0):
+                return
+
+            if sys.platform.startswith("win"):
+                delta = getattr(event, "delta", 0)
+                if delta == 0:
+                    return
+                # Touchpad sends high-frequency small deltas; standard mouse wheel notches send +/-120
+                if abs(delta) >= 120:
+                    units = -int(delta / 4)  # ~30px per notch (fast & responsive)
+                else:
+                    units = -int(delta / 2)  # Fluid touchpad two-finger tracking
+                    if units == 0:
+                        units = -1 if delta > 0 else 1
+                canvas.yview("scroll", units, "units")
+            elif sys.platform == "darwin":
+                delta = getattr(event, "delta", 0)
+                canvas.yview("scroll", -delta, "units")
+            else:
+                num = getattr(event, "num", 0)
+                canvas.yview_scroll(-1 if num == 4 else 1, "units")
+
+        self.scroll_frame._check_if_valid_scroll = custom_check_valid
+        self.scroll_frame._mouse_wheel_all = smooth_mouse_wheel
+
+        # Also bind on the parent frame and canvas directly
+        self.scroll_frame._parent_canvas.bind("<MouseWheel>", smooth_mouse_wheel, add=True)
+        self.scroll_frame.bind("<MouseWheel>", smooth_mouse_wheel, add=True)
 
     def _add_welcome_card(self):
         welcome_frame = ctk.CTkFrame(self.scroll_frame, fg_color="#1e293b", corner_radius=12)
@@ -573,8 +648,8 @@ class AISidebarApp(ctk.CTk):
         w_body.pack(anchor="w", padx=12, pady=(0, 10))
 
     def _build_quick_chips(self):
-        chips_frame = ctk.CTkFrame(self.main_container, fg_color="transparent", height=32)
-        chips_frame.pack(fill="x", side="top", padx=8, pady=(2, 6))
+        self.chips_frame = ctk.CTkFrame(self.main_container, fg_color="transparent", height=32)
+        self.chips_frame.pack(fill="x", side="top", padx=8, pady=(2, 6))
 
         chips = [
             ("📋 Paste & Ask", self._paste_from_clipboard),
@@ -585,7 +660,7 @@ class AISidebarApp(ctk.CTk):
 
         for text, cmd in chips:
             btn = ctk.CTkButton(
-                chips_frame,
+                self.chips_frame,
                 text=text,
                 height=24,
                 font=ctk.CTkFont(size=11),
