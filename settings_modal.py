@@ -81,8 +81,8 @@ class SettingsModal(ctk.CTkToplevel):
             sec_gemini, "Gemini API Key:", gemini_cfg.get("api_key", ""), "gemini"
         )
 
-        gemini_models = gemini_cfg.get("available_models", ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"])
-        self.gemini_model_var = ctk.StringVar(value=gemini_cfg.get("model", "gemini-2.5-flash"))
+        gemini_models = gemini_cfg.get("available_models", ["gemini-3.8-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"])
+        self.gemini_model_var = ctk.StringVar(value=gemini_cfg.get("model", "gemini-3.8-flash"))
         self._create_model_dropdown(sec_gemini, "Gemini Model:", gemini_models, self.gemini_model_var)
 
         # --- Section 3: DeepSeek Setup ---

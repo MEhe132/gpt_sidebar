@@ -67,6 +67,10 @@ class AIService:
                 err_msg = str(e)
                 if "API_KEY_INVALID" in err_msg or "Incorrect API key" in err_msg or "401" in err_msg:
                     on_error(f"Authentication Failed: Invalid API key for {provider.capitalize()}.\nPlease verify your key in Settings ⚙️.")
+                elif "402" in err_msg or "Insufficient Balance" in err_msg:
+                    on_error(f"Insufficient Balance on {provider.capitalize()} (Error 402).\nYour account has $0 prepaid balance. Please top up your API credits at {provider.capitalize()}'s developer dashboard.")
+                elif "insufficient_quota" in err_msg:
+                    on_error(f"Quota Exceeded for {provider.capitalize()}.\nYour credit balance is $0 or your trial has expired. Please check your billing dashboard.")
                 elif "RESOURCE_EXHAUSTED" in err_msg or "rate limit" in err_msg.lower() or "429" in err_msg:
                     on_error(f"Rate Limit Exceeded for {provider.capitalize()}.\nPlease wait a moment or switch to another model/provider.")
                 else:
@@ -105,7 +109,7 @@ class AIService:
         )
 
         response = client.models.generate_content_stream(
-            model=model or "gemini-2.5-flash",
+            model=model or "gemini-3.8-flash",
             contents=formatted_contents,
             config=config,
         )
