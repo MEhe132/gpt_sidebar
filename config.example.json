@@ -1,0 +1,40 @@
+{
+  "active_provider": "gemini",
+  "hotkey": "windows+c",
+  "sidebar_width": 430,
+  "always_on_top": true,
+  "theme": "dark",
+  "font_size": 13,
+  "providers": {
+    "gemini": {
+      "api_key": "",
+      "model": "gemini-2.5-flash",
+      "available_models": [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash"
+      ]
+    },
+    "deepseek": {
+      "api_key": "",
+      "model": "deepseek-chat",
+      "base_url": "https://api.deepseek.com",
+      "available_models": [
+        "deepseek-chat",
+        "deepseek-reasoner"
+      ]
+    },
+    "openai": {
+      "api_key": "",
+      "model": "gpt-4o-mini",
+      "base_url": "https://api.openai.com/v1",
+      "available_models": [
+        "gpt-4o-mini",
+        "gpt-4o",
+        "o3-mini"
+      ]
+    }
+  },
+  "system_prompt": "You are a concise, helpful, and intelligent desktop AI sidebar assistant. Format answers cleanly using markdown."
+}

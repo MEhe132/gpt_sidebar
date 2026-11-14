@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+
+# Configuration with private API keys
+config.json
+.env
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
