@@ -4,16 +4,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **A modern, ultra-responsive desktop AI sidebar popup pinned to the right edge of your Windows screen.**  
-> Seamlessly switch between **Google Gemini**, **DeepSeek (R1 / V3)**, and **OpenAI (ChatGPT)** with real-time streaming responses, summoned anytime with **`Alt + C`**!
+> Seamlessly switch between **Groq (Sub-second LPUs)**, **Google Gemini**, **DeepSeek (R1 / V3)**, and **OpenAI (ChatGPT)** with real-time streaming responses, summoned anytime with **`Alt + C`**!
 
 ---
 
 ## ✨ Highlights & Features
 
-- 🪟 **Right-Edge Docked Sidebar**: Pinned smoothly to the right border of your desktop without covering your taskbar, always ready when you need it.
-- ⌨️ **Global Hotkey (`Alt + C`)**: Toggle open or minimize the sidebar instantly from any application or full-screen game.
+- 🪟 **Right-Edge Docked Sidebar**: Pinned smoothly to the right or left border of your desktop without covering your taskbar, resizable with interactive drag border.
+- ⌨️ **Global Hotkey (`Alt + C`)**: Toggle open or minimize the sidebar instantly from any application with instant focus lock.
 - 🧠 **Multi-Provider AI Switching**:
-  - **Google Gemini**: Super-fast with free-tier access (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`).
+  - **Groq (Ultra-Fast LPUs)**: Sub-second latency responses (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.8-27b`).
+  - **Google Gemini**: Modern models (`gemini-3.8-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`).
   - **DeepSeek**: Deep reasoning models (`deepseek-chat`, `deepseek-reasoner` / R1) via standard API.
   - **OpenAI (ChatGPT)**: Industry-standard models (`gpt-4o-mini`, `gpt-4o`, `o3-mini`).
 - ⚡ **Real-Time Token Streaming**: Words appear on your screen as they are generated, powered by multi-threaded background workers (zero UI freezing).
@@ -55,6 +56,7 @@ pip install -r requirements.txt
 
 1. Click the **⚙️ (Settings)** icon in the top right corner of the sidebar.
 2. Paste your API key(s):
+   - **Groq Key (Fastest)**: [Get free key at Groq Console](https://console.groq.com/keys)
    - **Gemini Key**: [Get free key at Google AI Studio](https://aistudio.google.com/app/apikey)
    - **DeepSeek Key**: [Get key at DeepSeek Platform](https://platform.deepseek.com/api_keys)
    - **OpenAI Key**: [Get key at OpenAI Platform](https://platform.openai.com/api-keys)

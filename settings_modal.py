@@ -105,8 +105,8 @@ class SettingsModal(ctk.CTkToplevel):
             sec_groq, "Groq API Key:", groq_cfg.get("api_key", ""), "groq"
         )
 
-        groq_models = groq_cfg.get("available_models", ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "deepseek-r1-distill-llama-70b"])
-        self.groq_model_var = ctk.StringVar(value=groq_cfg.get("model", "llama-3.3-70b-versatile"))
+        groq_models = groq_cfg.get("available_models", ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"])
+        self.groq_model_var = ctk.StringVar(value=groq_cfg.get("model", "openai/gpt-oss-120b"))
         self._create_model_dropdown(sec_groq, "Groq Model:", groq_models, self.groq_model_var)
 
         # --- Section 3: DeepSeek Setup ---

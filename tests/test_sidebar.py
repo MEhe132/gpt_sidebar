@@ -42,6 +42,9 @@ class TestConfigManager(unittest.TestCase):
         self.cm.set_active_provider("openai")
         self.assertEqual(self.cm.get_active_provider(), "openai")
 
+        self.cm.set_active_provider("groq")
+        self.assertEqual(self.cm.get_active_provider(), "groq")
+
     def test_update_hotkey(self):
         self.cm.set_hotkey("ctrl+shift+a")
         self.assertEqual(self.cm.get_hotkey(), "ctrl+shift+a")
@@ -77,6 +80,17 @@ class TestAIService(unittest.TestCase):
         )
         self.assertEqual(len(err_msg), 1)
         self.assertIn("Missing API Key for Gemini", err_msg[0])
+
+        groq_err = []
+        self.service.stream_chat(
+            messages=[{"role": "user", "content": "Hello"}],
+            on_chunk=lambda x: None,
+            on_complete=lambda x: None,
+            on_error=lambda err: groq_err.append(err),
+            override_provider="groq"
+        )
+        self.assertEqual(len(groq_err), 1)
+        self.assertIn("Missing API Key for Groq", groq_err[0])
 
 
 class TestHotkeyManager(unittest.TestCase):
