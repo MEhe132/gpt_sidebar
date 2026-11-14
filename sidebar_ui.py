@@ -2,6 +2,7 @@
 
 import os
 import sys
+import re
 import ctypes
 from ctypes import wintypes
 import tkinter as tk
@@ -102,9 +103,7 @@ class MessageCard(ctk.CTkFrame):
             activate_scrollbars=False
         )
         self.text_box.pack(fill="both", expand=True, padx=10, pady=(0, 8))
-        self.text_box.insert("1.0", self.content)
-        self.text_box.configure(state="disabled")
-        self._adjust_height()
+        self.render_markdown(self.content)
 
     def clear_text(self):
         self.content = ""
@@ -120,16 +119,103 @@ class MessageCard(ctk.CTkFrame):
         self._adjust_height()
 
     def update_text(self, new_text: str):
-        self.content = new_text
+        self.render_markdown(new_text)
+
+    def render_markdown(self, md_text: str):
+        """Renders Markdown syntax (bold, headings, lists, code) into styled text without raw asterisks."""
+        self.content = md_text
         self.text_box.configure(state="normal")
-        self.text_box.delete("1.0", "end")
-        self.text_box.insert("1.0", self.content)
+        tb = self.text_box._textbox
+        tb.delete("1.0", "end")
+
+        base_font = "Segoe UI"
+        base_size = 13
+
+        # Configure rich tags on the underlying Tkinter text widget
+        tb.tag_configure("bold", font=(base_font, base_size, "bold"), foreground="#ffffff")
+        tb.tag_configure("italic", font=(base_font, base_size, "italic"), foreground="#cbd5e1")
+        tb.tag_configure("h1", font=(base_font, base_size + 4, "bold"), foreground="#38bdf8")
+        tb.tag_configure("h2", font=(base_font, base_size + 2, "bold"), foreground="#60a5fa")
+        tb.tag_configure("h3", font=(base_font, base_size + 1, "bold"), foreground="#93c5fd")
+        tb.tag_configure("code_inline", font=("Consolas", base_size - 1), foreground="#f43f5e", background="#0f172a")
+        tb.tag_configure("code_block", font=("Consolas", base_size - 1), foreground="#e2e8f0", background="#090d16")
+        tb.tag_configure("bullet", font=(base_font, base_size, "bold"), foreground="#38bdf8")
+
+        lines = md_text.split("\n")
+        in_code_block = False
+
+        for i, line in enumerate(lines):
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                if not in_code_block:
+                    tb.insert("end", "\n")
+                continue
+
+            if in_code_block:
+                tb.insert("end", "  " + line + "\n", "code_block")
+                continue
+
+            # Headings (# H1, ## H2, ### H3)
+            if line.startswith("### "):
+                self._insert_formatted_line(tb, line[4:], ("h3",))
+                tb.insert("end", "\n")
+                continue
+            elif line.startswith("## "):
+                self._insert_formatted_line(tb, line[3:], ("h2",))
+                tb.insert("end", "\n")
+                continue
+            elif line.startswith("# "):
+                self._insert_formatted_line(tb, line[2:], ("h1",))
+                tb.insert("end", "\n")
+                continue
+
+            # Bullet points (- item or * item)
+            stripped = line.lstrip()
+            indent = len(line) - len(stripped)
+            if stripped.startswith(("- ", "* ")) and not stripped.startswith("**"):
+                tb.insert("end", " " * indent)
+                tb.insert("end", " • ", "bullet")
+                self._insert_formatted_line(tb, stripped[2:])
+                tb.insert("end", "\n")
+                continue
+
+            # Regular text line
+            self._insert_formatted_line(tb, line)
+            if i < len(lines) - 1:
+                tb.insert("end", "\n")
+
         self.text_box.configure(state="disabled")
         self._adjust_height()
 
+    def _insert_formatted_line(self, tb, text: str, base_tags: tuple = ()):
+        """Parses inline tokens: code `..`, bold **..**, italic *..*, bold-italic ***..***."""
+        token_pattern = re.compile(r'(`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|__[^_]+__|(?<!\*)\*[^*]+\*(?!\*)|(?<!_)_[^_]+_(?!_))')
+        pos = 0
+        for match in token_pattern.finditer(text):
+            start, end = match.span()
+            if start > pos:
+                plain = text[pos:start]
+                tb.insert("end", plain, base_tags)
+            token = match.group(0)
+            if token.startswith("`") and token.endswith("`"):
+                tb.insert("end", token[1:-1], base_tags + ("code_inline",))
+            elif token.startswith("***") and token.endswith("***"):
+                tb.insert("end", token[3:-3], base_tags + ("bold", "italic"))
+            elif token.startswith("**") and token.endswith("**"):
+                tb.insert("end", token[2:-2], base_tags + ("bold",))
+            elif token.startswith("__") and token.endswith("__"):
+                tb.insert("end", token[2:-2], base_tags + ("bold",))
+            elif token.startswith("*") and token.endswith("*"):
+                tb.insert("end", token[1:-1], base_tags + ("italic",))
+            elif token.startswith("_") and token.endswith("_"):
+                tb.insert("end", token[1:-1], base_tags + ("italic",))
+            pos = end
+        if pos < len(text):
+            tb.insert("end", text[pos:], base_tags)
+
     def _adjust_height(self):
-        lines = self.content.count("\n") + int(len(self.content) / 42) + 1
-        calculated_h = max(38, min(450, lines * 22))
+        lines = self.content.count("\n") + int(len(self.content) / 38) + 1
+        calculated_h = max(38, lines * 23)
         self.text_box.configure(height=calculated_h)
 
     def copy_content(self):
